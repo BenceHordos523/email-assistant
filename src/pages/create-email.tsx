@@ -109,7 +109,7 @@ const CreateEmail: NextPage = () => {
             </p>
           </div>
           <div className="w-full">
-            <form onSubmit={handleSubmit(emailContent)}>
+            <form onSubmit={void handleSubmit(emailContent)}>
               <label
                 className="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
                 htmlFor="multiple_files"
