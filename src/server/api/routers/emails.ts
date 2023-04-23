@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { z } from "zod";
 import { Configuration, OpenAIApi } from "openai";
-
+import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
+import { Redis } from "@upstash/redis";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 
@@ -10,6 +11,13 @@ const configuration = new Configuration({
 });
 
 const openai = new OpenAIApi(configuration);
+
+// Create a new ratelimiter, that allows 10 requests per 10 seconds
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(3, "1 m"),
+  analytics: true,
+});
 
 export const emailRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -40,12 +48,20 @@ export const emailRouter = createTRPCRouter({
         },
       });
 
+      const { success } = await ratelimit.limit(ctx.auth.userId);
+
       let emailContent = "";
       input.map((inputMail) => {
         emailContent += `#\nFrom: ${inputMail.from}\n`;
         emailContent += `Subject: ${inputMail.subject}\n`;
         emailContent += `Body: ${inputMail.content}\n#\n\n`;
       });
+
+      if (!success)
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Rate is limited to 3 request per 1 minute",
+        });
 
       const response = await openai.createCompletion({
         model: "text-davinci-003",
