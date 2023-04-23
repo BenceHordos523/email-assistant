@@ -1,7 +1,7 @@
 import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 
-export function Navbar() {
+export default function Navbar() {
   const user = useUser();
 
   return (
