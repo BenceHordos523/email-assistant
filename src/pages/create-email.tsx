@@ -8,26 +8,40 @@ import { api } from "~/utils/api";
 import fs from "fs";
 import MsgReader from "@kenjiuno/msgreader";
 import { useState } from "react";
-import { ClassRegistry } from "superjson/dist/class-registry";
 
 interface emailContentType {
-  senderEmail: string;
+  from: string;
   subject: string;
-  body: string;
+  content: string;
 }
 
 const CreateEmail: NextPage = () => {
   const router = useRouter();
   const [emailContent, setEmailContent] = useState<emailContentType>({
-    senderEmail: "",
+    from: "",
     subject: "",
-    body: "",
+    content: "",
   });
 
-  const handleSubmit = (emailContent: emailContentType) => {
-    console.log("PROCESS");
-    console.log(emailContent);
-  };
+  const { mutateAsync, isLoading, data } =
+    api.emails.create.useMutation<emailContentType>({
+      onSuccess: () => {
+        console.log("Success!");
+      },
+      onError: (e) => {
+        const errorMessage = e.data?.zodError?.fieldErrors.content;
+
+        if (errorMessage && errorMessage[0]) {
+          alert(errorMessage[0]);
+        } else {
+          alert("Failed to post! Please try again later.");
+        }
+      },
+    });
+
+  const { data: emails } = api.emails.list.useQuery();
+
+  console.log(emails);
 
   const handleOnChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     // console.log(e.target.files);
@@ -51,9 +65,9 @@ const CreateEmail: NextPage = () => {
     if (!subject) return;
 
     setEmailContent({
-      body,
-      senderEmail,
-      subject,
+      from: senderEmail,
+      subject: subject,
+      content: removeBoschPart(body),
     });
   };
 
@@ -109,7 +123,7 @@ const CreateEmail: NextPage = () => {
             </p>
           </div>
           <div className="w-full">
-            <form onSubmit={void handleSubmit(emailContent)}>
+            <form>
               <label
                 className="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
                 htmlFor="multiple_files"
@@ -130,8 +144,9 @@ const CreateEmail: NextPage = () => {
                 .msg files only
               </p>
               <button
-                type="submit"
+                type="button"
                 className="mb-2 mr-2 mt-3 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                onClick={() => mutateAsync(emailContent)}
               >
                 Process
               </button>

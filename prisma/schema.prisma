@@ -15,8 +15,9 @@ model EmailInformation {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    from      String
-    role      String
-    content   String
-    userID    String
+    from      String   @db.Text
+    subject   String   @db.Text
+    content   String   @db.LongText
+    response  String   @db.Text
+    userID    String   @db.Text
 }
