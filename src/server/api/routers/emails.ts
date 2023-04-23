@@ -2,11 +2,7 @@
 import { z } from "zod";
 import { Configuration, OpenAIApi } from "openai";
 
-import {
-  createTRPCRouter,
-  publicProcedure,
-  protectedProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 
 const configuration = new Configuration({

@@ -2,8 +2,6 @@ import { type NextPage } from "next";
 import Head from "next/head";
 import Link from "next/link";
 
-import { api } from "~/utils/api";
-
 const Home: NextPage = () => {
   return (
     <>
@@ -35,7 +33,7 @@ const Home: NextPage = () => {
               productivity with E-Mail Assistant. Try it today and experience
               the power of efficient email management.
             </p>
-            <a
+            <Link
               href="/create-email"
               className="inline-flex items-center text-lg text-blue-600 hover:underline dark:text-blue-500"
             >
@@ -52,7 +50,7 @@ const Home: NextPage = () => {
                   clip-rule="evenodd"
                 ></path>
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </main>

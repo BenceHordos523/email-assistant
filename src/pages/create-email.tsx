@@ -2,10 +2,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { type NextPage } from "next";
 import Head from "next/head";
-import { useRouter } from "next/router";
-import { useForm } from "react-hook-form";
 import { api } from "~/utils/api";
-import fs from "fs";
 import MsgReader from "@kenjiuno/msgreader";
 import { useState } from "react";
 
@@ -15,33 +12,92 @@ interface emailContentType {
   content: string;
 }
 
+const removeBoschPart = (inputString: string) => {
+  const startIndex = inputString.indexOf("Robert Bosch Elektronika Kft.");
+  if (startIndex !== -1) {
+    return inputString.substring(0, startIndex);
+  } else {
+    return inputString;
+  }
+};
+
+const EmailFeed = () => {
+  const { data: emails } = api.emails.list.useQuery();
+
+  return (
+    <>
+      <div className="flex w-full flex-col gap-8">
+        {emails?.map((email) => {
+          return (
+            <div
+              className="flex w-full flex-row justify-evenly gap-3"
+              key={email.id}
+            >
+              <div className="w-50 flex h-[200px] gap-10 overflow-auto">
+                <div className="block max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
+                  <p className="font-bold text-gray-700 dark:text-gray-400">
+                    From: {email.from}
+                  </p>
+                  <p className="mt-1 font-bold text-gray-700 dark:text-gray-400">
+                    Subject: {email.subject}
+                  </p>
+                  <p
+                    className="mt-1 font-normal text-gray-700 dark:text-gray-400"
+                    style={{ fontFamily: "Courier New, monospace" }}
+                  >
+                    Content: {email.content}
+                  </p>
+                </div>
+              </div>
+              <div className="w-50 h-[200px] overflow-auto">
+                <div className="block max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
+                  <p className="font-bold text-gray-700 dark:text-gray-400">
+                    Summary
+                  </p>
+
+                  <div className="font-normal text-gray-700 dark:text-gray-400">
+                    {email.response}
+                  </div>
+
+                  <p className="mt-2 font-bold text-gray-700 dark:text-gray-400">
+                    To-Do:
+                  </p>
+
+                  <div className="font-normal text-gray-700 dark:text-gray-400">
+                    {email.response}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <hr className="my-8 h-px border-0 bg-gray-200 dark:bg-gray-700"></hr>
+      </div>
+    </>
+  );
+};
+
 const CreateEmail: NextPage = () => {
-  const router = useRouter();
   const [emailContent, setEmailContent] = useState<emailContentType>({
     from: "",
     subject: "",
     content: "",
   });
 
-  const { mutateAsync, isLoading, data } =
-    api.emails.create.useMutation<emailContentType>({
-      onSuccess: () => {
-        console.log("Success!");
-      },
-      onError: (e) => {
-        const errorMessage = e.data?.zodError?.fieldErrors.content;
+  const { mutateAsync } = api.emails.create.useMutation<emailContentType>({
+    onSuccess: () => {
+      console.log("Success!");
+    },
+    onError: (e) => {
+      const errorMessage = e.data?.zodError?.fieldErrors.content;
 
-        if (errorMessage && errorMessage[0]) {
-          alert(errorMessage[0]);
-        } else {
-          alert("Failed to post! Please try again later.");
-        }
-      },
-    });
-
-  const { data: emails } = api.emails.list.useQuery();
-
-  console.log(emails);
+      if (errorMessage && errorMessage[0]) {
+        alert(errorMessage[0]);
+      } else {
+        alert("Failed to post! Please try again later.");
+      }
+    },
+  });
 
   const handleOnChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     // console.log(e.target.files);
@@ -71,23 +127,14 @@ const CreateEmail: NextPage = () => {
     });
   };
 
-  function removeBoschPart(inputString: string): string {
-    const startIndex = inputString.indexOf("Robert Bosch Elektronika Kft.");
-    if (startIndex !== -1) {
-      return inputString.substring(0, startIndex);
-    } else {
-      return inputString;
-    }
-  }
-
   async function createFileBuffer(file: File): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = () => {
         const buffer = Buffer.from(reader.result as ArrayBuffer);
         resolve(buffer);
       };
-      reader.onerror = (event) => {
+      reader.onerror = () => {
         reject(reader.error);
       };
       reader.readAsArrayBuffer(file);
@@ -153,60 +200,7 @@ const CreateEmail: NextPage = () => {
             </form>
           </div>
         </div>
-        <div className="flex w-full flex-col gap-8">
-          <div className="flex w-full flex-row justify-evenly gap-8">
-            <div className="w-50">
-              <a
-                href="#"
-                className="block max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-              >
-                <p className="font-bold text-gray-700 dark:text-gray-400">
-                  From: Bence.Hordos@hu.bosch.com
-                </p>
-                <p className="font-normal text-gray-700 dark:text-gray-400">
-                  Subject: QMC Tracking
-                </p>
-                <p className="font-normal text-gray-700 dark:text-gray-400">
-                  Content:{" "}
-                  {removeBoschPart(`Csatolmány.
-                    
-                    Üdvözlettel / Best regards,
-
-                    Bence Hordos
-
-                    (HtvP/QMM-LS-P)
-                    Robert Bosch Elektronika Kft. | Robert Bosch út 1 | H-3000 Hatvan | HUNGARY | www.bosch.hu
-                    Mobile +36 70 684-4404 | Bence.Hordos@hu.bosch.com<mailto:Bence.Hordos@hu.bosch.com>
-
-                    Registered Office: Hatvan
-                    Chairman of the Supervisory Board: Daniel Korioth; Managing Directors: Arne Ziegenbein, Horváth Attila, Markus Hildenbrand`)}
-                </p>
-              </a>
-            </div>
-            <div className="w-50">
-              <a
-                href="#"
-                className="block max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-              >
-                <p className="font-bold text-gray-700 dark:text-gray-400">
-                  From: Bence.Hordos@hu.bosch.com
-                </p>
-                <p className="font-normal text-gray-700 dark:text-gray-400">
-                  Subject: QMC Tracking
-                </p>
-                <p className="font-normal text-gray-700 dark:text-gray-400">
-                  Summarized content:{" "}
-                  {`This was a summary of the email.
-                    List of todos:
-                    - Do this
-                    - Do that
-                    - Do the other thing`}
-                </p>
-              </a>
-            </div>
-          </div>
-          <hr className="my-8 h-px border-0 bg-gray-200 dark:bg-gray-700"></hr>
-        </div>
+        <EmailFeed />
       </main>
     </>
   );
