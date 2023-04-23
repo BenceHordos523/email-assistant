@@ -78,13 +78,15 @@ const EmailFeed = () => {
 };
 
 const CreateEmail: NextPage = () => {
-  const [emailContent, setEmailContent] = useState<emailContentType>({
+  /*const [emailContent, setEmailContent] = useState<emailContentType>({
     from: "",
     subject: "",
     content: "",
-  });
+  });*/
 
-  const { mutateAsync } = api.emails.create.useMutation<emailContentType>({
+  const [emailContent, setEmailContent] = useState<emailContentType[]>([]);
+
+  const { mutateAsync } = api.emails.create.useMutation<emailContentType[]>({
     onSuccess: () => {
       console.log("Success!");
     },
@@ -99,12 +101,22 @@ const CreateEmail: NextPage = () => {
     },
   });
 
-  const handleOnChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // console.log(e.target.files);
+  async function createFileBuffer(file: File): Promise<Buffer> {
+    return new Promise<Buffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const buffer = Buffer.from(reader.result as ArrayBuffer);
+        resolve(buffer);
+      };
+      reader.onerror = () => {
+        reject(reader.error);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
 
-    if (!e.target.files) return;
-
-    const file = e.target.files[0];
+  const processEmail = async (recEmail: File) => {
+    const file = recEmail;
 
     if (!file) return;
 
@@ -120,26 +132,36 @@ const CreateEmail: NextPage = () => {
     if (!senderEmail) return;
     if (!subject) return;
 
-    setEmailContent({
+    setEmailContent((prev) => [
+      ...prev,
+      { from: senderEmail, subject, content: removeBoschPart(body) },
+    ]);
+
+    /*setEmailContent({
       from: senderEmail,
       subject: subject,
       content: removeBoschPart(body),
-    });
+    });*/
   };
 
-  async function createFileBuffer(file: File): Promise<Buffer> {
-    return new Promise<Buffer>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const buffer = Buffer.from(reader.result as ArrayBuffer);
-        resolve(buffer);
-      };
-      reader.onerror = () => {
-        reject(reader.error);
-      };
-      reader.readAsArrayBuffer(file);
-    });
-  }
+  const handleOnChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // console.log(e.target.files);
+
+    if (!e.target.files) return;
+
+    if (e.target.files.length > 1) {
+      const files = Array.from(e.target.files);
+      files.map(async (file) => {
+        await processEmail(file);
+      });
+    } else {
+      const file = e.target.files[0];
+
+      if (!file) return;
+
+      await processEmail(file);
+    }
+  };
 
   return (
     <>

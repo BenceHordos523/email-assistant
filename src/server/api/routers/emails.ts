@@ -24,19 +24,33 @@ export const emailRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(
-      z.object({
-        content: z.string(),
-        from: z.string(),
-        subject: z.string(),
-      })
+      z.array(
+        z.object({
+          content: z.string(),
+          from: z.string(),
+          subject: z.string(),
+        })
+      )
     )
     .mutation(async ({ ctx, input }) => {
+      let emailContent = "";
+      input.map((inputMail) => {
+        emailContent += `#\nFrom: ${inputMail.from}\n`;
+        emailContent += `Subject: ${inputMail.subject}\n`;
+        emailContent += `Body: ${inputMail.content}\n#\n\n`;
+
+        emailContent += `#\nFrom: Florentin.Zsigovics@hu.bosch.com\n`;
+        emailContent += `Subject: Update QMM site\n`;
+        emailContent += `Body: Please update the QMM site until 14:00\n#\n`;
+      });
+
       const response = await openai.createCompletion({
         model: "text-davinci-003",
         prompt:
-          "Summarize this for a second-grade student:\n\nJupiter is the fifth planet from the Sun and the largest in the Solar System. It is a gas giant with a mass one-thousandth that of the Sun, but two-and-a-half times that of all the other planets in the Solar System combined. Jupiter is one of the brightest objects visible to the naked eye in the night sky, and has been known to ancient civilizations since before recorded history. It is named after the Roman god Jupiter.[19] When viewed from Earth, Jupiter can be bright enough for its reflected light to cast visible shadows,[20] and is on average the third-brightest natural object in the night sky after the Moon and Venus.",
-        temperature: 0.7,
-        max_tokens: 256,
+          "You are a great E-Mail Task handler. You will process multiple emails at once. Between each e-mail there will be a # sign, this will show you the start and the end of the email. Your duty is to createa a summary of each e-mail. Based on the summary and reasons create a To-Do list to each e-mail, which is list of actions to do. The summary and the action list must contain every important section of the e-mail, because these e-mails are from the workplace. You don't wanna miss any critical information. The to-do list should be critical and precise for each e-mail. Create the to-do list with reason and critical thinking. The summary should be short and precise for a workplace. Start each response with: From: the e-mail address, Subject: the subject of the e-mail and then the summary and the to-do list. After you process all the e-mails, the result should come back in a prio list. Urgent and critical cases should be first, then put smaller, meaningless e-mails later in the list. The priorization should be critical. If you are ready I will send you the e-mails. The To-Do List should be a list of actions items. The result you give me should be in the same format I give you, put #### between each e-mail response you make, but don't forget about the priorization. Process the emails: \n\n" +
+          emailContent,
+        temperature: 0.2,
+        max_tokens: 1024,
         top_p: 1,
         frequency_penalty: 0,
         presence_penalty: 0,
@@ -51,12 +65,18 @@ export const emailRouter = createTRPCRouter({
         });
       }
 
-      await ctx.prisma.emailInformation.create({
-        data: {
-          ...input,
-          response: responseText,
-          userID: ctx.auth.userId,
-        },
-      });
+      console.log(responseText);
+
+      /*input.map(async (inputMail) => {
+        // openai calls here
+
+        await ctx.prisma.emailInformation.create({
+          data: {
+            ...inputMail,
+            response: responseText,
+            userID: ctx.auth.userId,
+          },
+        });
+      });*/
     }),
 });
